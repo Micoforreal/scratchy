@@ -1,0 +1,26 @@
+# Core dependencies
+pyyaml>=6.0
+numpy>=1.24.0
+requests>=2.28.0
+
+# Optional: for future real data integration
+# Uncomment when ready to use real APIs
+
+# For Solana onchain data
+# solana>=0.30.0
+# anchorpy>=0.18.0
+
+# For GitHub API
+# PyGithub>=2.1.0
+
+# For web crawling (if not using self-hosted crawler)
+# beautifulsoup4>=4.12.0
+# lxml>=4.9.0
+
+# For potential database upgrade
+# sqlalchemy>=2.0.0
+# psycopg2-binary>=2.9.0  # PostgreSQL
+
+# For testing (future)
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0

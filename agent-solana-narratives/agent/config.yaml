@@ -1,0 +1,83 @@
+# Solana Narrative Detection Agent Configuration
+
+# Time window configuration
+window:
+  duration_days: 14  # Fortnightly window
+  
+# Signal collection configuration
+collection:
+  # Number of top repos to track
+  github_repo_limit: 50
+  
+  # Social sources (curated list - can be URLs, RSS feeds, etc.)
+  social_sources:
+    - "https://solana.com/news"
+    - "https://www.helius.dev/blog"
+    - "placeholder-kol-feed"
+  
+  # Onchain metrics to track
+  onchain_metrics:
+    - "transaction_volume"
+    - "active_wallets"
+    - "program_deployments"
+    - "tvl"
+
+# Signal processing configuration
+signals:
+  # Normalization method: "minmax" or "zscore"
+  normalization_method: "minmax"
+  
+  # Minimum momentum threshold (percentage growth)
+  momentum_threshold_pct: 15.0
+  
+  # Signal weighting (must sum to 1.0)
+  weights:
+    onchain: 0.33
+    github: 0.33
+    social: 0.34
+
+# Narrative detection configuration
+narratives:
+  # Minimum number of signal types that must reinforce each other
+  min_signal_types: 2
+  
+  # Maximum number of narratives to output
+  max_narratives: 7
+  
+  # Minimum overall momentum score (0-100)
+  min_momentum_score: 20
+  
+  # TF-IDF clustering parameters
+  clustering:
+    max_features: 100
+    min_df: 2
+    ngram_range: [1, 2]
+
+# LLM usage configuration
+llm:
+  # Temperature for generation
+  temperature: 0.7
+  
+  # Max tokens per LLM call
+  max_tokens: 1500
+  
+  # Number of build ideas to generate per narrative
+  ideas_per_narrative: 5
+
+# Output configuration
+output:
+  # Report format: ["markdown", "html"] or just ["markdown"]
+  formats:
+    - "markdown"
+  
+  # Include timestamp in report filenames
+  timestamp_reports: true
+  
+  # Create "latest" symlink/copy
+  create_latest_alias: true
+
+# Storage paths (relative to project root)
+paths:
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  reports: "reports"
