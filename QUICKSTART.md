@@ -66,10 +66,14 @@ You should see:
 
 ## Step 4: Run the Agent
 
-```bash
-cd agent
-python main.py
-```
+# Navigate to the agent directory
+cd d:\github\scratchy\agent-solana-narratives\agent
+
+# Run the agent with your virtual environment's Python
+D:/github/scratchy/agent-solana-narratives/.venv/Scripts/python.exe main.py
+
+
+
 
 ## What to Expect
 

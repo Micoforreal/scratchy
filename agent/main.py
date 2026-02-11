@@ -13,6 +13,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+env_file = Path(__file__).parent.parent / ".env"
+load_dotenv(env_file)
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
