@@ -4,12 +4,12 @@ Social and offchain signal collector for Solana ecosystem.
 Collects signals from blogs, reports, KOL posts, and curated sources.
 Uses optional crawler integration for content fetching.
 
-Currently uses mock data - replace with real crawler/RSS integration for production.
+Supports both mock data and live API calls via crawler or RSS.
 """
 
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import os
 
 
@@ -17,25 +17,39 @@ class SocialCollector:
     """
     Collects offchain/social signals from curated sources.
     
-    In production, this would integrate with a self-hosted crawler (e.g., crawl4ai)
-    or RSS feeds. For now, generates realistic mock data.
+    Supports:
+    - Mock data (for development/testing - always works)
+    - Live data via self-hosted crawler (e.g., crawl4ai)
+    - Live data via RSS feeds
     """
     
-    def __init__(self, crawler_url: str = None, sources: List[str] = None):
+    def __init__(self, crawler_url: str = None, sources: List[str] = None, use_mock: bool = None):
         """
         Initialize social collector.
         
         Args:
             crawler_url: Base URL for self-hosted crawler (reads from env if not provided)
             sources: List of curated sources to monitor
+            use_mock: Force mock data (True) or live data (False).
+                     If None, reads USE_MOCK_DATA env var (default: True)
         """
         self.crawler_url = crawler_url or os.getenv("CRAWLER_BASE_URL")
         self.crawler_enabled = os.getenv("CRAWLER_ENABLED", "false").lower() == "true"
         self.sources = sources or [
             "https://solana.com/news",
             "https://www.helius.dev/blog",
-            "placeholder-kol-feed"
+            "https://www.coindesk.com/",
         ]
+        
+        # Determine if we should use mock data
+        if use_mock is None:
+            use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
+        self.use_mock = use_mock
+        
+        # Validate setup for live data
+        if not self.use_mock and not (self.crawler_enabled and self.crawler_url):
+            print("⚠️  No crawler configured and CRAWLER_ENABLED is false. Falling back to mock data.")
+            self.use_mock = True
         
     def collect(self, window_days: int = 14) -> List[Dict[str, Any]]:
         """
@@ -47,12 +61,178 @@ class SocialCollector:
         Returns:
             List of signal dictionaries
         """
-        if self.crawler_enabled and self.crawler_url:
-            # TODO: Implement real crawler integration
-            # For now, fall back to mock data
-            pass
-        
+        if self.use_mock:
+            return self._collect_mock(window_days)
+        else:
+            return self._collect_live(window_days)
+    
+    def _collect_mock(self, window_days: int) -> List[Dict[str, Any]]:
+        """Collect mock social signals for testing/development."""
         return self._generate_mock_social_signals(window_days)
+    
+    def _collect_live(self, window_days: int) -> List[Dict[str, Any]]:
+        """Collect live social signals from crawler or RSS feeds."""
+        signals = []
+        
+        if self.crawler_enabled and self.crawler_url:
+            print(f"   🌐 Fetching live social data from crawler...")
+            signals.extend(self._fetch_from_crawler(window_days))
+        
+        # Also try RSS feeds as fallback/supplement
+        print(f"   🌐 Fetching live social data from RSS feeds...")
+        signals.extend(self._fetch_from_rss(window_days))
+        
+        if not signals:
+            print("   ⚠️  No live data collected. Falling back to mock data.")
+            return self._collect_mock(window_days)
+        
+        return signals
+    
+    def _fetch_from_crawler(self, window_days: int) -> List[Dict[str, Any]]:
+        """Fetch content from self-hosted crawler."""
+        import requests
+        
+        signals = []
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=window_days)
+        
+        try:
+            for source_url in self.sources:
+                try:
+                    # Call crawler API
+                    response = requests.post(
+                        f"{self.crawler_url}/crawl",
+                        json={
+                            "url": source_url,
+                            "since": start_date.isoformat(),
+                            "until": end_date.isoformat()
+                        },
+                        timeout=30
+                    )
+                    response.raise_for_status()
+                    
+                    data = response.json()
+                    articles = data.get("articles", [])
+                    
+                    # Extract signals from articles
+                    for article in articles:
+                        content = article.get("content", "")
+                        title = article.get("title", "")
+                        published = article.get("published", end_date.isoformat())
+                        
+                        # Try to parse date
+                        try:
+                            pub_date = datetime.fromisoformat(published)
+                        except:
+                            pub_date = end_date
+                        
+                        # Extract mentions of key topics
+                        mentions = self._extract_topic_mentions(title + " " + content)
+                        
+                        for topic, count in mentions.items():
+                            signals.append({
+                                "signal_type": "social",
+                                "metric": "content_mentions",
+                                "value": count,
+                                "timestamp": pub_date,
+                                "metadata": {
+                                    "source": "crawler",
+                                    "topic": topic,
+                                    "url": source_url,
+                                    "title": title
+                                }
+                            })
+                    
+                except Exception as e:
+                    print(f"      ⚠️  Error crawling {source_url}: {e}")
+                    continue
+        
+        except Exception as e:
+            print(f"   ⚠️  Crawler error: {e}")
+        
+        return signals
+    
+    def _fetch_from_rss(self, window_days: int) -> List[Dict[str, Any]]:
+        """Fetch content from RSS feeds."""
+        try:
+            import feedparser
+        except ImportError:
+            print("   ⚠️  feedparser not installed. Install with: pip install feedparser")
+            return []
+        
+        signals = []
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=window_days)
+        
+        for feed_url in self.sources:
+            try:
+                feed = feedparser.parse(feed_url)
+                
+                for entry in feed.entries[:10]:  # Get last 10 entries
+                    try:
+                        # Extract date
+                        if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                            pub_date = datetime.fromtimestamp(
+                                __import__('time').mktime(entry.published_parsed)
+                            )
+                        else:
+                            pub_date = end_date
+                        
+                        # Skip if outside time window
+                        if pub_date < start_date:
+                            continue
+                        
+                        # Extract content
+                        title = entry.get('title', '')
+                        summary = entry.get('summary', '')
+                        content = title + " " + summary
+                        
+                        # Extract topic mentions
+                        mentions = self._extract_topic_mentions(content)
+                        
+                        for topic, count in mentions.items():
+                            signals.append({
+                                "signal_type": "social",
+                                "metric": "content_mentions",
+                                "value": count,
+                                "timestamp": pub_date,
+                                "metadata": {
+                                    "source": "rss",
+                                    "topic": topic,
+                                    "feed": feed_url,
+                                    "title": title
+                                }
+                            })
+                    
+                    except Exception as e:
+                        print(f"      ⚠️  Error processing RSS entry: {e}")
+                        continue
+            
+            except Exception as e:
+                print(f"   ⚠️  Error parsing feed {feed_url}: {e}")
+                continue
+        
+        return signals
+    
+    def _extract_topic_mentions(self, text: str) -> Dict[str, int]:
+        """Extract topic mentions from text."""
+        topics = {
+            "ai_agents": ["ai", "agent", "bot", "autonomous", "chatbot"],
+            "defi": ["defi", "dex", "yield", "liquidity", "amm", "perps"],
+            "gaming": ["game", "nft", "metaverse", "p2e", "play-to-earn"],
+            "payments": ["payment", "usdc", "stablecoin", "merchant", "commerce"],
+        }
+        
+        text_lower = text.lower()
+        mentions = {}
+        
+        for topic, keywords in topics.items():
+            count = sum(1 for keyword in keywords if keyword in text_lower)
+            if count > 0:
+                mentions[topic] = count
+        
+        return mentions
+    
     
     def _generate_mock_social_signals(self, window_days: int) -> List[Dict[str, Any]]:
         """
