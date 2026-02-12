@@ -65,7 +65,7 @@ class LocalLLMClient(LLMClient):
         }
         
         try:
-            response = requests.post(url, json=payload, headers=headers, timeout=120)
+            response = requests.post(url, json=payload, headers=headers, timeout=300)
             response.raise_for_status()
             
             data = response.json()

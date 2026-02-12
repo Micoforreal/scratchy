@@ -81,3 +81,7 @@ paths:
   raw_data: "data/raw"
   processed_data: "data/processed"
   reports: "reports"
+
+# Data collection mode
+data:
+  use_mock: true  # Override with USE_MOCK_DATA env var

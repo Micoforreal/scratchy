@@ -4,32 +4,55 @@ Onchain signal collector for Solana ecosystem.
 Collects blockchain usage signals including transaction volume,
 active wallets, program deployments, and TVL.
 
-Currently uses mock data - replace with real Solana RPC calls for production.
+Supports both mock data and live API calls via pluggable providers.
 """
 
 import random
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import os
+
+from .onchain_provider import get_onchain_provider
 
 
 class OnchainCollector:
     """
     Collects onchain usage signals from Solana blockchain.
     
-    In production, this would query Solana RPC endpoints, block explorers,
-    or analytics APIs. For now, generates realistic mock data.
+    Supports:
+    - Mock data (for development/testing - always works)
+    - Live data via Helius API (recommended)
+    - Live data via Solana RPC (free but slower)
     """
     
-    def __init__(self, rpc_url: str = None):
+    def __init__(self, rpc_url: str = None, use_mock: bool = None, provider: str = None):
         """
         Initialize onchain collector.
         
         Args:
             rpc_url: Solana RPC endpoint (reads from env if not provided)
+            use_mock: Force mock data (True) or live data (False). 
+                     If None, reads USE_MOCK_DATA env var (default: True)
+            provider: Onchain provider to use ("helius", "solana_rpc").
+                     If None, auto-detects based on available API keys.
         """
         self.rpc_url = rpc_url or os.getenv("SOLANA_RPC_URL", "https://api.mainnet-beta.solana.com")
         
+        # Determine if we should use mock data
+        if use_mock is None:
+            use_mock = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
+        self.use_mock = use_mock
+        
+        # Initialize live provider (only if not using mock)
+        self.provider = None
+        if not self.use_mock:
+            try:
+                self.provider = get_onchain_provider(provider)
+            except ValueError as e:
+                print(f"⚠️  Could not initialize live onchain provider: {e}")
+                print("   Falling back to mock data")
+                self.use_mock = True
+    
     def collect(self, window_days: int = 14) -> List[Dict[str, Any]]:
         """
         Collect onchain signals for the specified time window.
@@ -45,18 +68,55 @@ class OnchainCollector:
                 - timestamp: When the signal was recorded
                 - metadata: Additional context
         """
+        if self.use_mock:
+            return self._collect_mock(window_days)
+        else:
+            return self._collect_live(window_days)
+    
+    def _collect_mock(self, window_days: int) -> List[Dict[str, Any]]:
+        """Collect mock onchain signals for testing/development."""
         signals = []
         end_date = datetime.now()
         start_date = end_date - timedelta(days=window_days)
         
         # Mock data: simulate various onchain metrics
-        # TODO: Replace with real Solana RPC/analytics API calls
-        
         metrics = {
             "transaction_volume": self._mock_transaction_volume(start_date, end_date),
             "active_wallets": self._mock_active_wallets(start_date, end_date),
             "program_deployments": self._mock_program_deployments(start_date, end_date),
             "tvl": self._mock_tvl(start_date, end_date),
+        }
+        
+        for metric_name, data in metrics.items():
+            for entry in data:
+                signals.append({
+                    "signal_type": "onchain",
+                    "metric": metric_name,
+                    "value": entry["value"],
+                    "timestamp": entry["timestamp"],
+                    "metadata": entry.get("metadata", {})
+                })
+        
+        return signals
+    
+    def _collect_live(self, window_days: int) -> List[Dict[str, Any]]:
+        """Collect live onchain signals from configured provider."""
+        if not self.provider:
+            print("⚠️  No live provider available, falling back to mock")
+            return self._collect_mock(window_days)
+        
+        signals = []
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=window_days)
+        
+        print(f"   🌐 Fetching live onchain data from {self.provider.__class__.__name__}...")
+        
+        # Collect from live provider
+        metrics = {
+            "transaction_volume": self.provider.get_transaction_volume(start_date, end_date),
+            "active_wallets": self.provider.get_active_wallets(start_date, end_date),
+            "program_deployments": self.provider.get_program_deployments(start_date, end_date),
+            "tvl": self.provider.get_tvl(start_date, end_date),
         }
         
         for metric_name, data in metrics.items():

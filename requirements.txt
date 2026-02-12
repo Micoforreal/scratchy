@@ -4,19 +4,21 @@ pyyaml>=6.0
 numpy>=1.24.0
 requests>=2.28.0
 
-# Optional: for future real data integration
-# Uncomment when ready to use real APIs
+# Live data collection (optional - install for live data support)
+PyGithub>=2.1.0         # GitHub API (for live GitHub data)
+feedparser>=6.0.0       # RSS feed parsing (for live social data)
 
 # For Solana onchain data
+# Uncomment when ready to use live Solana RPC
 # solana>=0.30.0
-# anchorpy>=0.18.0
 
-# For GitHub API
-# PyGithub>=2.1.0
+# For future real data integration
+# Uncomment when ready to use real APIs
 
-# For web crawling (if not using self-hosted crawler)
+# For web crawling (if not using self-hosted crawler  eg recommended crawl4ai
 # beautifulsoup4>=4.12.0
 # lxml>=4.9.0
+#
 
 # For potential database upgrade
 # sqlalchemy>=2.0.0

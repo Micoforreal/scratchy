@@ -225,25 +225,55 @@ def main():
     print("📡 STAGE 1: SIGNAL COLLECTION")
     print("=" * 50)
     
+    # Get data collection mode
+    use_mock_data = os.getenv("USE_MOCK_DATA", "true").lower() == "true"
+    data_mode = "📊 MOCK" if use_mock_data else "🌐 LIVE"
+    print(f"\n   Data Mode: {data_mode}")
+    
     window_days = config["window"]["duration_days"]
     
+    # Collect onchain signals with error handling
     print(f"\n   Collecting onchain signals...")
-    onchain = OnchainCollector()
-    onchain_signals = onchain.collect(window_days)
-    print(f"   ✅ Collected {len(onchain_signals)} onchain signals")
+    onchain_signals = []
+    try:
+        onchain = OnchainCollector(use_mock=use_mock_data)
+        onchain_signals = onchain.collect(window_days)
+        print(f"   ✅ Collected {len(onchain_signals)} onchain signals")
+    except Exception as e:
+        print(f"   ⚠️  Onchain collection failed: {e}")
+        onchain_signals = []
     
+    # Collect GitHub signals with error handling
     print(f"\n   Collecting GitHub signals...")
-    github = GitHubCollector(repo_limit=config["collection"]["github_repo_limit"])
-    github_signals = github.collect(window_days)
-    print(f"   ✅ Collected {len(github_signals)} GitHub signals")
+    github_signals = []
+    try:
+        github = GitHubCollector(repo_limit=config["collection"]["github_repo_limit"], use_mock=use_mock_data)
+        github_signals = github.collect(window_days)
+        print(f"   ✅ Collected {len(github_signals)} GitHub signals")
+    except Exception as e:
+        print(f"   ⚠️  GitHub collection failed: {e}")
+        github_signals = []
     
+    # Collect social signals with error handling
     print(f"\n   Collecting social signals...")
-    social = SocialCollector(sources=config["collection"]["social_sources"])
-    social_signals = social.collect(window_days)
-    print(f"   ✅ Collected {len(social_signals)} social signals")
+    social_signals = []
+    try:
+        social = SocialCollector(sources=config["collection"]["social_sources"], use_mock=use_mock_data)
+        social_signals = social.collect(window_days)
+        print(f"   ✅ Collected {len(social_signals)} social signals")
+    except Exception as e:
+        print(f"   ⚠️  Social collection failed: {e}")
+        social_signals = []
     
     all_signals = onchain_signals + github_signals + social_signals
     print(f"\n   📊 Total signals: {len(all_signals)}")
+    
+    # Check if we have any signals
+    if not all_signals:
+        print("\n   ❌ Error: No signals collected from any source!")
+        print("   Please check your data sources and try again.")
+        sys.exit(1)
+    
     save_signals(all_signals, config, "01_raw_signals")
     
     # Stage 2: Process Signals
