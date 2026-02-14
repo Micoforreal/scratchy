@@ -7,13 +7,13 @@ window:
 # Signal collection configuration
 collection:
   # Number of top repos to track
-  github_repo_limit: 50
+  github_repo_limit: 5
   
   # Social sources (curated list - can be URLs, RSS feeds, etc.)
   social_sources:
     - "https://solana.com/news"
     - "https://www.helius.dev/blog"
-    - "placeholder-kol-feed"
+    - "https://www.coindesk.com/"
   
   # Onchain metrics to track
   onchain_metrics:

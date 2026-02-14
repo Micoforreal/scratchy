@@ -89,7 +89,7 @@ class SocialCollector:
         return signals
     
     def _fetch_from_crawler(self, window_days: int) -> List[Dict[str, Any]]:
-        """Fetch content from self-hosted crawler."""
+        """Fetch content from self-hosted crawler (crawl4ai format)."""
         import requests
         
         signals = []
@@ -99,50 +99,73 @@ class SocialCollector:
         try:
             for source_url in self.sources:
                 try:
-                    # Call crawler API
+                    # Call crawl4ai API with proper format
                     response = requests.post(
                         f"{self.crawler_url}/crawl",
                         json={
-                            "url": source_url,
-                            "since": start_date.isoformat(),
-                            "until": end_date.isoformat()
+                            "urls": [source_url],
+                            "crawler_config": {
+                                "type": "CrawlerRunConfig",
+                                "params": {
+                                    "scraping_strategy": {
+                                        "type": "LXMLWebScrapingStrategy",
+                                        "params": {}
+                                    },
+                                    "stream": False  # Use batch mode
+                                }
+                            }
                         },
-                        timeout=30
+                        timeout=60
                     )
                     response.raise_for_status()
                     
                     data = response.json()
-                    articles = data.get("articles", [])
                     
-                    # Extract signals from articles
-                    for article in articles:
-                        content = article.get("content", "")
-                        title = article.get("title", "")
-                        published = article.get("published", end_date.isoformat())
-                        
-                        # Try to parse date
+                    # Handle crawl4ai response structure
+                    # crawl4ai returns results in different format
+                    results = data.get("results", [])
+                    
+                    for result in results:
                         try:
-                            pub_date = datetime.fromisoformat(published)
-                        except:
-                            pub_date = end_date
-                        
-                        # Extract mentions of key topics
-                        mentions = self._extract_topic_mentions(title + " " + content)
-                        
-                        for topic, count in mentions.items():
-                            signals.append({
-                                "signal_type": "social",
-                                "metric": "content_mentions",
-                                "value": count,
-                                "timestamp": pub_date,
-                                "metadata": {
-                                    "source": "crawler",
-                                    "topic": topic,
-                                    "url": source_url,
-                                    "title": title
-                                }
-                            })
+                            # Handle crawl4ai response - content can be dict or string
+                            content = result.get("markdown", result.get("html", ""))
+                            if isinstance(content, dict):
+                                content = str(content)
+                            elif not isinstance(content, str):
+                                content = str(content)
+                            
+                            title = result.get("title", source_url)
+                            if isinstance(title, dict):
+                                title = str(title)
+                            elif not isinstance(title, str):
+                                title = str(title)
+                            
+                            # Extract mentions of key topics
+                            mentions = self._extract_topic_mentions(title + " " + content)
+                            
+                            for topic, count in mentions.items():
+                                signals.append({
+                                    "signal_type": "social",
+                                    "metric": "content_mentions",
+                                    "value": count,
+                                    "timestamp": end_date,
+                                    "metadata": {
+                                        "source": "crawl4ai",
+                                        "topic": topic,
+                                        "url": source_url,
+                                        "title": title
+                                    }
+                                })
+                        except Exception as e:
+                            print(f"      ⚠️  Error processing crawl4ai result: {e}")
+                            continue
                     
+                except requests.exceptions.Timeout:
+                    print(f"      ⚠️  Timeout crawling {source_url} (> 60s)")
+                    continue
+                except requests.exceptions.ConnectionError:
+                    print(f"      ⚠️  Could not connect to crawler at {self.crawler_url}")
+                    continue
                 except Exception as e:
                     print(f"      ⚠️  Error crawling {source_url}: {e}")
                     continue

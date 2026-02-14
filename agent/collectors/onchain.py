@@ -101,35 +101,42 @@ class OnchainCollector:
     
     def _collect_live(self, window_days: int) -> List[Dict[str, Any]]:
         """Collect live onchain signals from configured provider."""
-        if not self.provider:
-            print("⚠️  No live provider available, falling back to mock")
+        try:
+            # Get the provider (will auto-detect based on available API keys)
+            provider = get_onchain_provider()
+            
+            signals = []
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=window_days)
+            
+            print(f"   🌐 Fetching live onchain data from {provider.__class__.__name__}...")
+            
+            # Collect different onchain metrics
+            metrics = {
+                "transaction_volume": provider.get_transaction_volume(start_date, end_date),
+                "active_wallets": provider.get_active_wallets(start_date, end_date),
+                "program_deployments": provider.get_program_deployments(start_date, end_date),
+                "tvl": provider.get_tvl(start_date, end_date),
+            }
+            
+            # Convert to signal format
+            for metric_name, data in metrics.items():
+                for entry in data:
+                    signals.append({
+                        "signal_type": "onchain",
+                        "metric": metric_name,
+                        "value": entry["value"],
+                        "timestamp": entry["timestamp"],
+                        "metadata": entry.get("metadata", {})
+                    })
+            
+            return signals
+        
+        except Exception as e:
+            print(f"   ⚠️  Error in live onchain collection: {e}")
+            print("   Falling back to mock data")
+            # Fall back to mock data on any error
             return self._collect_mock(window_days)
-        
-        signals = []
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=window_days)
-        
-        print(f"   🌐 Fetching live onchain data from {self.provider.__class__.__name__}...")
-        
-        # Collect from live provider
-        metrics = {
-            "transaction_volume": self.provider.get_transaction_volume(start_date, end_date),
-            "active_wallets": self.provider.get_active_wallets(start_date, end_date),
-            "program_deployments": self.provider.get_program_deployments(start_date, end_date),
-            "tvl": self.provider.get_tvl(start_date, end_date),
-        }
-        
-        for metric_name, data in metrics.items():
-            for entry in data:
-                signals.append({
-                    "signal_type": "onchain",
-                    "metric": metric_name,
-                    "value": entry["value"],
-                    "timestamp": entry["timestamp"],
-                    "metadata": entry.get("metadata", {})
-                })
-        
-        return signals
     
     def _mock_transaction_volume(self, start_date: datetime, end_date: datetime) -> List[Dict]:
         """Generate mock transaction volume data with trends."""
