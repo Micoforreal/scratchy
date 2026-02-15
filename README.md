@@ -81,6 +81,50 @@ trading bots and chatbot frameworks seeing 40%+ growth in the past two weeks.
    A trading bot that automatically rebalances portfolios based on...
 ```
 
+## Web Interface 🌐
+
+Scratchy now includes a modern web interface! Access the agent via your browser with a beautiful dashboard.
+
+### Features:
+- 🚀 One-click agent runs
+- 📊 Real-time progress tracking
+- 📄 Report viewer with markdown rendering
+- 🎨 Modern Solana-themed UI
+- 📱 Responsive design (mobile + desktop)
+
+### Quick Start (Web Version):
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure .env with your API key
+cp .env.example .env
+
+# Run the web server
+python app.py
+```
+
+Visit `http://localhost:8080` in your browser!
+
+### Deploy to the Cloud:
+
+Deploy to **Vercel** or **Render** for a public URL:
+
+```bash
+# Push to GitHub
+git init && git add . && git commit -m "Initial commit"
+git push
+
+# Then deploy via:
+# - Vercel: https://vercel.com (best for demos)
+# - Render: https://render.com (best for production)
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
+## Installation & Setup (CLI Version)
+
 ## Installation & Setup
 
 ### Prerequisites

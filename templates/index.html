@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratchy - Solana Narrative Detection Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Scratchy</h1>
+            <p class="subtitle">Solana Narrative Detection Agent</p>
+        </header>
+
+        <main>
+            <!-- Control Panel -->
+            <section class="control-panel">
+                <button id="runBtn" class="btn-primary">
+                    <span class="btn-icon">▶</span>
+                    Run Agent
+                </button>
+                <div id="status" class="status-box">
+                    <div class="status-indicator idle"></div>
+                    <span id="statusText">Ready to run</span>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section id="progressSection" class="progress-section hidden">
+                <h2>Current Run Progress</h2>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <p id="progressText" class="progress-text">Initializing...</p>
+            </section>
+
+            <!-- Latest Report -->
+            <section class="latest-report">
+                <h2>Latest Report</h2>
+                <div id="latestReport" class="report-container">
+                    <p class="empty-state">No reports generated yet. Click "Run Agent" to start!</p>
+                </div>
+            </section>
+
+            <!-- All Reports -->
+            <section class="all-reports">
+                <h2>Report History</h2>
+                <div id="reportsList" class="reports-list">
+                    <p class="empty-state">Loading reports...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built for the Solana ecosystem | 
+                <a href="https://github.com/yourusername/scratchy" target="_blank">GitHub</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
